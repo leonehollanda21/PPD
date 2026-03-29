@@ -1,0 +1,3 @@
+@echo off
+echo Executando Jogo Dara (JAR)...
+java -jar DaraGame.jar

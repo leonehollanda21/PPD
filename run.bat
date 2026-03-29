@@ -1,0 +1,3 @@
+@echo off
+echo Executando Jogo Dara...
+java -cp bin com.dara.DaraGameGUI
