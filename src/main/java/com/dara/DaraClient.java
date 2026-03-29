@@ -6,7 +6,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Classe cliente para conexão via socket
+ * Componente cliente da arquitetura distribuída do jogo.
+ * Responsável por abrir socket TCP para o servidor, serializar comandos locais
+ * e desserializar eventos remotos mantendo o estado sincronizado entre processos.
  */
 public class DaraClient extends Thread {
     private String serverHost;
@@ -18,6 +20,9 @@ public class DaraClient extends Thread {
     private boolean connected;
     private BlockingQueue<GameMessage> messageQueue;
     
+    /**
+     * Inicializa os dados de conexão e a fila concorrente usada entre thread de rede e thread de processamento.
+     */
     public DaraClient(String host, int port, DaraGameGUI gui) {
         this.serverHost = host;
         this.serverPort = port;
@@ -26,6 +31,10 @@ public class DaraClient extends Thread {
         this.messageQueue = new LinkedBlockingQueue<>();
     }
     
+    /**
+     * Thread principal do cliente: conecta no servidor, lê o socket continuamente e publica mensagens na fila.
+     * Esse desenho evita processar regras de jogo diretamente na mesma thread de I/O.
+     */
     @Override
     public void run() {
         try {
@@ -63,6 +72,9 @@ public class DaraClient extends Thread {
         }
     }
     
+    /**
+     * Consome mensagens da fila bloqueante e entrega para a GUI aplicar a lógica local de sincronização.
+     */
     private void processMessages() {
         while (connected) {
             try {
@@ -75,6 +87,9 @@ public class DaraClient extends Thread {
         }
     }
     
+    /**
+     * Encapsula uma jogada de colocação no protocolo de mensagens distribuídas.
+     */
     public void sendPlacement(int row, int col) {
         GameMessage message = new GameMessage(
             GameMessage.Type.PLACE_PIECE, 
@@ -84,6 +99,9 @@ public class DaraClient extends Thread {
         sendMessage(message);
     }
     
+    /**
+     * Encapsula uma jogada de movimentação no protocolo e envia ao servidor autoritativo.
+     */
     public void sendMovement(int fromRow, int fromCol, int toRow, int toCol) {
         GameMessage message = new GameMessage(
             GameMessage.Type.MOVE_PIECE, 
@@ -93,6 +111,9 @@ public class DaraClient extends Thread {
         sendMessage(message);
     }
     
+    /**
+     * Encapsula uma captura para que ambos os nós apliquem a mesma transição de estado.
+     */
     public void sendCapture(int row, int col) {
         GameMessage message = new GameMessage(
             GameMessage.Type.CAPTURE_PIECE, 
@@ -102,23 +123,35 @@ public class DaraClient extends Thread {
         sendMessage(message);
     }
     
+    /**
+     * Envia texto de chat para o outro processo e também registra localmente a mensagem enviada.
+     */
     public void sendChatMessage(String text) {
         GameMessage message = new GameMessage(GameMessage.Type.CHAT_MESSAGE, text);
         sendMessage(message);
         gui.addChatMessage("Você: " + text);
     }
     
+    /**
+     * Notifica desistência ao par remoto para finalizar a sessão de jogo de forma consistente.
+     */
     public void sendForfeit() {
         GameMessage message = new GameMessage(GameMessage.Type.FORFEIT, "Desistência");
         sendMessage(message);
     }
     
+    /**
+     * Ponto único de escrita no socket; protege contra envio quando a conexão não está ativa.
+     */
     private void sendMessage(GameMessage message) {
         if (connected && out != null) {
             out.println(message.toString());
         }
     }
     
+    /**
+     * Encerra recursos de rede e marca o cliente como desconectado para parar loops concorrentes.
+     */
     public void disconnect() {
         connected = false;
         try {
@@ -130,6 +163,9 @@ public class DaraClient extends Thread {
         }
     }
     
+    /**
+     * Informa para a camada de UI se o canal distribuído está pronto para troca de jogadas.
+     */
     public boolean isConnected() {
         return connected;
     }

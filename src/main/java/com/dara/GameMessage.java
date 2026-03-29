@@ -1,7 +1,8 @@
 package com.dara;
 
 /**
- * Classe que representa as mensagens trocadas via socket
+ * Mensagem de aplicação trocada entre os nós via socket TCP.
+ * Define um protocolo textual simples para comandos de jogo, eventos de controle e chat.
  */
 public class GameMessage {
     public enum Type {
@@ -20,33 +21,54 @@ public class GameMessage {
     private String content;
     private int[] data; // Para coordenadas e outros dados numéricos
     
+    /**
+     * Cria uma mensagem sem payload numérico (ex.: chat, controle de sessão).
+     */
     public GameMessage(Type type, String content) {
         this.type = type;
         this.content = content;
     }
     
+    /**
+     * Cria mensagem com payload numérico para coordenadas de jogada.
+     */
     public GameMessage(Type type, String content, int[] data) {
         this.type = type;
         this.content = content;
         this.data = data;
     }
     
+    /**
+     * Retorna o tipo semântico usado no despacho de ações distribuídas.
+     */
     public Type getType() {
         return type;
     }
     
+    /**
+     * Retorna conteúdo textual auxiliar da mensagem.
+     */
     public String getContent() {
         return content;
     }
     
+    /**
+     * Retorna vetor com dados numéricos da jogada (linhas/colunas).
+     */
     public int[] getData() {
         return data;
     }
     
+    /**
+     * Permite atualizar payload numérico quando necessário.
+     */
     public void setData(int[] data) {
         this.data = data;
     }
     
+    /**
+     * Serializa a mensagem no formato textual do protocolo: TYPE:content:DATA:n1,n2,...
+     */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -64,6 +86,9 @@ public class GameMessage {
         return sb.toString();
     }
     
+    /**
+     * Faz parsing do protocolo textual recebido pelo socket para objeto de domínio.
+     */
     public static GameMessage fromString(String message) {
         String[] parts = message.split(":", 3);
         if (parts.length < 1) return null;

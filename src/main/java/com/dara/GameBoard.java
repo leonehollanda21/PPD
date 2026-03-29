@@ -11,11 +11,17 @@ public class GameBoard {
     private static final int COLS = 6;
     private PieceType[][] board;
     
+    /**
+     * Cria a matriz do tabuleiro e inicializa todas as casas como vazias.
+     */
     public GameBoard() {
         board = new PieceType[ROWS][COLS];
         initializeBoard();
     }
     
+    /**
+     * Preenche a estrutura de dados do tabuleiro com EMPTY.
+     */
     private void initializeBoard() {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLS; j++) {
@@ -24,14 +30,23 @@ public class GameBoard {
         }
     }
     
+    /**
+     * Valida limites de linha/coluna para evitar acesso inválido na matriz.
+     */
     public boolean isValidPosition(int row, int col) {
         return row >= 0 && row < ROWS && col >= 0 && col < COLS;
     }
     
+    /**
+     * Verifica se uma posição existente está livre para receber peça.
+     */
     public boolean isEmpty(int row, int col) {
         return isValidPosition(row, col) && board[row][col] == PieceType.EMPTY;
     }
     
+    /**
+     * Consulta segura do conteúdo de uma casa; fora do tabuleiro retorna EMPTY.
+     */
     public PieceType getPiece(int row, int col) {
         if (!isValidPosition(row, col)) {
             return PieceType.EMPTY;
@@ -39,6 +54,9 @@ public class GameBoard {
         return board[row][col];
     }
     
+    /**
+     * Tenta colocar uma peça em casa vazia durante a fase de colocação.
+     */
     public boolean placePiece(int row, int col, PieceType piece) {
         if (isEmpty(row, col) && piece != PieceType.EMPTY) {
             board[row][col] = piece;
@@ -47,6 +65,10 @@ public class GameBoard {
         return false;
     }
     
+    /**
+     * Move peça ortogonalmente para casa adjacente vazia, conforme regra do Dara.
+     * Como é determinístico, o mesmo comando de rede gera o mesmo estado nos dois nós.
+     */
     public boolean movePiece(int fromRow, int fromCol, int toRow, int toCol) {
         if (!isValidPosition(fromRow, fromCol) || !isValidPosition(toRow, toCol)) {
             return false;
@@ -70,6 +92,9 @@ public class GameBoard {
         return true;
     }
     
+    /**
+     * Remove peça de uma posição válida (usado em capturas e rollback de jogada inválida).
+     */
     public void removePiece(int row, int col) {
         if (isValidPosition(row, col)) {
             board[row][col] = PieceType.EMPTY;
@@ -147,6 +172,9 @@ public class GameBoard {
         return pieces;
     }
     
+    /**
+     * Constrói representação textual para logs e depuração de estado.
+     */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

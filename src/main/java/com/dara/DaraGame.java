@@ -3,7 +3,9 @@ package com.dara;
 import java.util.List;
 
 /**
- * Classe principal que controla a lógica do jogo Dara
+ * Núcleo de regras do Dara implementado como máquina de estados.
+ * Essa lógica é determinística para que a mesma sequência de mensagens de rede
+ * produza o mesmo estado no servidor e no cliente.
  */
 public class DaraGame {
     private static final int TOTAL_PIECES = 12;
@@ -19,6 +21,9 @@ public class DaraGame {
     private PieceType winner;
     private boolean waitingForCapture;
     
+    /**
+     * Inicializa um novo estado de partida com tabuleiro vazio e fase de colocação.
+     */
     public DaraGame() {
         board = new GameBoard();
         phase = GamePhase.PLACEMENT;
@@ -33,7 +38,8 @@ public class DaraGame {
     }
     
     /**
-     * Realiza uma jogada (colocação ou movimento)
+     * Porta de entrada de jogada simples usada na fase de colocação.
+     * Na fase de movimentação, o fluxo completo exige origem e destino e é tratado em movePiece.
      */
     public boolean makeMove(int row, int col) {
         if (gameEnded || waitingForCapture) return false;
@@ -48,7 +54,8 @@ public class DaraGame {
     }
     
     /**
-     * Realiza movimento de uma peça
+     * Executa movimentação na fase de movimento, validando dono da peça e adjacência no tabuleiro.
+     * Após uma jogada válida, verifica formação de linha de 3 e alternância de turno.
      */
     public boolean movePiece(int fromRow, int fromCol, int toRow, int toCol) {
         if (gameEnded || phase != GamePhase.MOVEMENT || waitingForCapture) {
@@ -70,7 +77,8 @@ public class DaraGame {
     }
     
     /**
-     * Coloca uma peça no tabuleiro (fase de colocação)
+     * Regra da fase de colocação: adiciona peça, bloqueia formação de 3 em linha nessa fase
+     * e muda para MOVEMENT quando ambos os jogadores colocam todas as peças.
      */
     private boolean placePiece(int row, int col) {
         if (!board.placePiece(row, col, currentPlayer)) {
@@ -106,7 +114,8 @@ public class DaraGame {
     }
     
     /**
-     * Verifica se o jogador atual formou 3 em linha
+     * Verifica formação de 3 em linha após uma jogada de movimento.
+     * Se ocorrer, o turno não troca e o jogador entra no estado obrigatório de captura.
      */
     private void checkForThreeInARow() {
         List<Position> threeInARow = board.checkThreeInARow(currentPlayer);
@@ -116,7 +125,8 @@ public class DaraGame {
     }
     
     /**
-     * Captura uma peça do oponente
+     * Remove uma peça adversária quando o jogo está aguardando captura,
+     * contabiliza captura e avalia condição de fim de jogo.
      */
     public boolean capturePiece(int row, int col) {
         if (!waitingForCapture) return false;
@@ -148,7 +158,7 @@ public class DaraGame {
     }
     
     /**
-     * Verifica se o jogo terminou
+     * Regra de término: jogador com 2 ou menos peças no tabuleiro perde a partida.
      */
     private void checkGameEnd() {
         int player1Pieces = board.countPieces(PieceType.PLAYER1);
@@ -166,14 +176,14 @@ public class DaraGame {
     }
     
     /**
-     * Muda para o próximo jogador
+     * Alterna o token do jogador atual, representando troca de turno.
      */
     private void switchPlayer() {
         currentPlayer = (currentPlayer == PieceType.PLAYER1) ? PieceType.PLAYER2 : PieceType.PLAYER1;
     }
     
     /**
-     * Permite que um jogador desista
+     * Encerra imediatamente a partida por desistência e define vencedor como o oponente.
      */
     public void forfeit(PieceType player) {
         winner = (player == PieceType.PLAYER1) ? PieceType.PLAYER2 : PieceType.PLAYER1;
@@ -181,27 +191,44 @@ public class DaraGame {
         phase = GamePhase.GAME_OVER;
     }
     
-    // Getters
+    /**
+     * Expõe o tabuleiro atual para renderização e validações na interface.
+     */
     public GameBoard getBoard() {
         return board;
     }
     
+    /**
+     * Informa a fase global da máquina de estados da partida.
+     */
     public GamePhase getPhase() {
         return phase;
     }
     
+    /**
+     * Informa de quem é o turno na lógica central do jogo.
+     */
     public PieceType getCurrentPlayer() {
         return currentPlayer;
     }
     
+    /**
+     * Retorna quantas peças o jogador 1 já colocou durante a fase inicial.
+     */
     public int getPlayer1PiecesPlaced() {
         return player1PiecesPlaced;
     }
     
+    /**
+     * Retorna quantas peças o jogador 2 já colocou durante a fase inicial.
+     */
     public int getPlayer2PiecesPlaced() {
         return player2PiecesPlaced;
     }
     
+    /**
+     * Calcula quantas peças ainda faltam para o jogador posicionar na fase de colocação.
+     */
     public int getPiecesRemaining(PieceType player) {
         if (player == PieceType.PLAYER1) {
             return TOTAL_PIECES - player1PiecesPlaced;
@@ -211,23 +238,38 @@ public class DaraGame {
         return 0;
     }
     
+    /**
+     * Informa se a partida já terminou.
+     */
     public boolean isGameEnded() {
         return gameEnded;
     }
     
+    /**
+     * Retorna o vencedor definido ao final da partida.
+     */
     public PieceType getWinner() {
         return winner;
     }
     
+    /**
+     * Indica se o jogador da vez precisa realizar captura antes de passar o turno.
+     */
     public boolean isWaitingForCapture() {
         return waitingForCapture;
     }
     
+    /**
+     * Lista peças do oponente elegíveis para captura com base no jogador informado.
+     */
     public List<Position> getOpponentPieces(PieceType currentPlayer) {
         PieceType opponent = (currentPlayer == PieceType.PLAYER1) ? PieceType.PLAYER2 : PieceType.PLAYER1;
         return board.getOpponentPieces(opponent);
     }
     
+    /**
+     * Gera uma visão textual do estado da partida para depuração e logs.
+     */
     public String getGameStatus() {
         StringBuilder status = new StringBuilder();
         status.append("Fase: ").append(phase.name()).append("\n");

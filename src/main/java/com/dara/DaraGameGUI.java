@@ -6,7 +6,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * Interface gráfica principal do jogo Dara
+ * Camada de apresentação Swing do jogo.
+ * Integra ações do usuário com o modelo local e com a camada de rede,
+ * respeitando as regras de thread do Swing para evitar condições de corrida na UI.
  */
 public class DaraGameGUI extends JFrame {
     private static final int BOARD_SIZE = 500;
@@ -31,17 +33,26 @@ public class DaraGameGUI extends JFrame {
     private boolean isServer;
     private PieceType playerType;
     
+    /**
+     * Constrói a janela principal, inicializa estado local e inicia o fluxo de conexão distribuída.
+     */
     public DaraGameGUI() {
         initializeGame();
         initializeGUI();
         showConnectionDialog();
     }
     
+    /**
+     * Inicializa o estado de domínio do jogo no processo local.
+     */
     private void initializeGame() {
         game = new DaraGame();
         selectedPosition = null;
     }
     
+    /**
+     * Monta os componentes Swing da tela e registra listeners de interação.
+     */
     private void initializeGUI() {
         setTitle("Jogo Dara");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -99,6 +110,9 @@ public class DaraGameGUI extends JFrame {
         setLocationRelativeTo(null);
     }
     
+    /**
+     * Cria grade visual do tabuleiro e associa cada botão à coordenada correspondente.
+     */
     private void initializeBoardButtons() {
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 6; j++) {
@@ -121,6 +135,10 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Trata clique no tabuleiro conforme fase do jogo e modo de execução (local, servidor ou cliente).
+     * Em rede, a GUI envia comando e a aplicação da jogada ocorre pela mensagem recebida para manter ordem causal.
+     */
     private void handleBoardClick(int row, int col) {
         if (game.isGameEnded() || !isMyTurn()) {
             return;
@@ -189,6 +207,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Limpa destaque visual de peça selecionada na fase de movimentação.
+     */
     private void clearSelection() {
         if (selectedPosition != null) {
             int row = selectedPosition.getRow();
@@ -198,10 +219,16 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Verifica se o turno lógico corresponde ao jogador desta instância.
+     */
     private boolean isMyTurn() {
         return game.getCurrentPlayer() == playerType;
     }
     
+    /**
+     * Re-renderiza o tabuleiro com base no estado atual do modelo de jogo.
+     */
     private void updateBoard() {
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 6; j++) {
@@ -226,6 +253,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Atualiza rótulos de fase/turno e mensagens de fim de jogo para feedback imediato ao usuário.
+     */
     private void updateStatus() {
         phaseLabel.setText("Fase: " + (game.getPhase() == GamePhase.PLACEMENT ? "Colocação" : "Movimentação"));
         
@@ -243,6 +273,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Envia chat para o peer conectado e limpa caixa de entrada.
+     */
     private void sendChatMessage() {
         String message = chatInput.getText().trim();
         if (message.isEmpty()) {
@@ -258,6 +291,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Processa desistência local e propaga evento ao outro nó quando há conexão ativa.
+     */
     private void forfeitGame() {
         if (client != null) {
             client.sendForfeit();
@@ -273,11 +309,17 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Adiciona texto no histórico do chat e mantém rolagem no fim.
+     */
     public void addChatMessage(String message) {
         chatArea.append(message + "\n");
         chatArea.setCaretPosition(chatArea.getDocument().getLength());
     }
     
+    /**
+     * Abre diálogo inicial para escolher papel distribuído da instância (servidor ou cliente).
+     */
     private void showConnectionDialog() {
         String[] options = {"Servidor", "Cliente"};
         int choice = JOptionPane.showOptionDialog(
@@ -303,6 +345,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Inicializa endpoint servidor desta GUI e define o jogador local como PLAYER1.
+     */
     private void startServer() {
         isServer = true;
         playerType = PieceType.PLAYER1;
@@ -317,6 +362,9 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Inicializa endpoint cliente, conecta ao servidor informado e define jogador local como PLAYER2.
+     */
     private void connectToServer(String host) {
         isServer = false;
         playerType = PieceType.PLAYER2;
@@ -331,6 +379,10 @@ public class DaraGameGUI extends JFrame {
         }
     }
     
+    /**
+     * Callback de mensagens de rede. Usa invokeLater para garantir que toda mutação de UI
+     * e aplicação de eventos aconteçam na Event Dispatch Thread (sincronização correta do Swing).
+     */
     public void onGameMove(GameMessage message) {
         SwingUtilities.invokeLater(() -> {
             switch (message.getType()) {
@@ -373,10 +425,16 @@ public class DaraGameGUI extends JFrame {
         });
     }
     
+    /**
+     * Expõe o modelo de jogo para inspeção/testes externos da GUI.
+     */
     public DaraGame getGame() {
         return game;
     }
     
+    /**
+     * Ponto de entrada da aplicação desktop.
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             new DaraGameGUI().setVisible(true);
